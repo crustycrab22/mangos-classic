@@ -95,13 +95,13 @@ bool ChatHandler::HandleServerInfoCommand(char* /*args*/)
 
     char const* full;
     if (m_session)
-        full = _FULLVERSION(REVISION_DATE, "|cffffffff|Hurl:" REVISION_ID "|h" REVISION_ID "|h|r");
+        full = _FULLVERSION(REVISION_DATE, "|c58a0b0|Hurl:" REVISION_ID "|h" REVISION_ID "|h|r");
     else
         full = _FULLVERSION(REVISION_DATE, REVISION_ID);
     SendSysMessage(full);
-
-    PSendSysMessage(LANG_USING_WORLD_DB, sWorld.GetDBVersion());
-    PSendSysMessage(LANG_USING_EVENT_AI, sWorld.GetCreatureEventAIVersion());
+	// ppl dont need to know which DB version etc.
+    //PSendSysMessage(LANG_USING_WORLD_DB, sWorld.GetDBVersion());
+    //PSendSysMessage(LANG_USING_EVENT_AI, sWorld.GetCreatureEventAIVersion());
     PSendSysMessage(LANG_CONNECTED_USERS, activeClientsNum, maxActiveClientsNum, queuedClientsNum, maxQueuedClientsNum);
     PSendSysMessage(LANG_UPTIME, str.c_str());
 
