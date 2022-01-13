@@ -47,4 +47,4 @@
 #include "AI/ScriptDevAI/include/sc_gossip.h"
 #include "AI/ScriptDevAI/include/sc_grid_searchers.h"
 #include "AI/ScriptDevAI/include/sc_instance.h"
-#endif // PCHDEF_H
+#endif // PCHDEF_HH
