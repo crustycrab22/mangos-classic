@@ -183,7 +183,8 @@ namespace MaNGOS
 
         inline float CalculateRpDecay(float rpEarning, float RP)
         {
-            float Decay = floor((0.2f * RP) + 0.5f);
+			// reduce weekly calculated honor decay to 10%
+            float Decay = floor((0.1f * RP) + 0.5f);
             float Delta = rpEarning - Decay;
             if (Delta < 0)
             {
