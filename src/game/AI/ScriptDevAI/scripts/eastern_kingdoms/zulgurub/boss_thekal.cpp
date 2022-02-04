@@ -69,8 +69,8 @@ enum
 
     ACTION_RESSURECTION     = 10,
 
-    SPELL_LIST_PHASE_1 = 1450701,
-    SPELL_LIST_PHASE_2 = 1450702,
+    SPELL_LIST_PHASE_1 = 1450901,
+    SPELL_LIST_PHASE_2 = 1450902,
 };
 
 // abstract base class for faking death
@@ -97,7 +97,7 @@ struct boss_thekalBaseAI : public CombatAI
     uint8 m_uiPhase;
 
     virtual void OnFakeingDeath() {}
-    virtual void OnRevive() {}
+    virtual bool OnRevive() { return false; }
 
     void JustPreventedDeath(Unit* /*attacker*/)
     {
@@ -139,16 +139,17 @@ struct boss_thekalBaseAI : public CombatAI
         Reset();
 
         // Assume Attack
-        SetCombatMovement(true, true);
+        if (!OnRevive())
+        {
+            SetCombatMovement(true, true);
 
-        SetDeathPrevention(true);
+            SetDeathPrevention(true);
 
-        SetCombatScriptStatus(false);
-
-        OnRevive();
+            SetCombatScriptStatus(false);
+        }
     }
 
-    void PreventRevive()
+    virtual void PreventRevive()
     {
         if (m_creature->IsNonMeleeSpellCasted(true))
             m_creature->InterruptNonMeleeSpells(true);
@@ -185,6 +186,9 @@ struct boss_thekalAI : public boss_thekalBaseAI
             m_uiPhase = PHASE_TIGER;
             SetDeathPrevention(false);
             SetCombatScriptStatus(false);
+            SetMeleeEnabled(true);
+            SetCombatMovement(true, true);
+            m_creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
             m_creature->SetSpellList(SPELL_LIST_PHASE_2);
             SetActionReadyStatus(THEKAL_TIGER_ENRAGE, true);
         });
@@ -198,6 +202,8 @@ struct boss_thekalAI : public boss_thekalBaseAI
 
         // remove fake death
         Revive(true);
+
+        SetMeleeEnabled(true);
 
         m_creature->SetSpellList(SPELL_LIST_PHASE_1);
     }
@@ -243,21 +249,21 @@ struct boss_thekalAI : public boss_thekalBaseAI
             return false;
 
         // Else Prevent them Resurrecting
-        if (Creature* pLorkhan = m_instance->GetSingleCreatureFromStorage(NPC_LORKHAN))
+        if (Creature* lorkhan = m_instance->GetSingleCreatureFromStorage(NPC_LORKHAN))
         {
-            if (boss_thekalBaseAI* pFakerAI = dynamic_cast<boss_thekalBaseAI*>(pLorkhan->AI()))
+            if (boss_thekalBaseAI* pFakerAI = dynamic_cast<boss_thekalBaseAI*>(lorkhan->AI()))
                 pFakerAI->PreventRevive();
         }
-        if (Creature* pZath = m_instance->GetSingleCreatureFromStorage(NPC_ZATH))
+        if (Creature* zath = m_instance->GetSingleCreatureFromStorage(NPC_ZATH))
         {
-            if (boss_thekalBaseAI* pFakerAI = dynamic_cast<boss_thekalBaseAI*>(pZath->AI()))
+            if (boss_thekalBaseAI* pFakerAI = dynamic_cast<boss_thekalBaseAI*>(zath->AI()))
                 pFakerAI->PreventRevive();
         }
 
         return true;
     }
 
-    void OnFakeingDeath()
+    void OnFakeingDeath() override
     {
         ResetTimer(ACTION_RESSURECTION, 10000);
 
@@ -271,18 +277,31 @@ struct boss_thekalAI : public boss_thekalBaseAI
         }
     }
 
-    void OnRevive()
+    bool OnRevive() override
     {
         if (!m_instance)
-            return;
+            return false;
 
         // Both Adds are 'dead' enter tiger phase
         if (CanPreventAddsResurrect())
         {
+            m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+            SetMeleeEnabled(false);
             DoCastSpellIfCan(nullptr, SPELL_RESSURECTION_IMPACT_VISUAL);
-            SetCombatScriptStatus(true);
+            m_creature->SetTarget(nullptr);
             ResetTimer(THEKAL_RESS_PHASE_2_DELAY, 5000);
+            return true;
         }
+        return false;
+    }
+
+    void EnterEvadeMode() override
+    {
+        CombatAI::EnterEvadeMode();
+        if (Creature* lorkhan = m_instance->GetSingleCreatureFromStorage(NPC_LORKHAN))
+            lorkhan->AI()->EnterEvadeMode();
+        if (Creature* zath = m_instance->GetSingleCreatureFromStorage(NPC_ZATH))
+            zath->AI()->EnterEvadeMode();
     }
 
     void ExecuteAction(uint32 action)
@@ -334,12 +353,18 @@ struct mob_zealot_lorkhanAI : public boss_thekalBaseAI
             m_instance->SetData(TYPE_LORKHAN, IN_PROGRESS);
     }
 
-    void OnFakeingDeath()
+    void OnFakeingDeath() override
     {
         ResetTimer(ACTION_RESSURECTION, 10000);
 
         if (m_instance)
             m_instance->SetData(TYPE_LORKHAN, SPECIAL);
+    }
+
+    void PreventRevive() override
+    {
+        boss_thekalBaseAI::PreventRevive();
+        DisableTimer(ACTION_RESSURECTION);
     }
 };
 
@@ -377,12 +402,18 @@ struct mob_zealot_zathAI : public boss_thekalBaseAI
             m_instance->SetData(TYPE_ZATH, IN_PROGRESS);
     }
 
-    void OnFakeingDeath()
+    void OnFakeingDeath() override
     {
         ResetTimer(ACTION_RESSURECTION, 10000);
 
         if (m_instance)
             m_instance->SetData(TYPE_ZATH, SPECIAL);
+    }
+
+    void PreventRevive() override
+    {
+        boss_thekalBaseAI::PreventRevive();
+        DisableTimer(ACTION_RESSURECTION);
     }
 };
 

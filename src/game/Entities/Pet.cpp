@@ -640,6 +640,10 @@ void Pet::SetDeathState(DeathState s)                       // overwrite virtual
         CastPetAuras(true);
     }
     CastOwnerTalentAuras();
+
+    if (getPetType() == GUARDIAN_PET)
+        if (Unit* owner = GetOwner())
+            owner->RemoveGuardian(this);
 }
 
 void Pet::Update(const uint32 diff)
@@ -932,14 +936,11 @@ int32 Pet::GetTPForSpell(uint32 spellid) const
     uint32 basetrainp = 0;
 
     SkillLineAbilityMapBounds bounds = sSpellMgr.GetSkillLineAbilityMapBoundsBySpellId(spellid);
-
-    for (SkillLineAbilityMap::const_iterator _spell_idx = bounds.first; _spell_idx != bounds.second; ++_spell_idx)
+    if (bounds.first != bounds.second)
     {
-        if (!_spell_idx->second->reqtrainpoints)
+        basetrainp = bounds.first->second->reqtrainpoints;
+        if (basetrainp == 0)
             return 0;
-
-        basetrainp = _spell_idx->second->reqtrainpoints;
-        break;
     }
 
     uint32 spenttrainp = 0;
