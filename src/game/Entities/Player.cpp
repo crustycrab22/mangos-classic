@@ -11537,6 +11537,9 @@ void Player::PrepareGossipMenu(WorldObject* pSource, uint32 menuId, bool forceQu
         }
     }
 
+    if (pSource->IsCreature() && canSeeQuests && !static_cast<Unit*>(pSource)->isQuestGiver())
+        canSeeQuests = false;
+
     if (canSeeQuests)
         PrepareQuestMenu(pSource->GetObjectGuid());
 
@@ -11828,7 +11831,7 @@ uint32 Player::GetGossipTextId(uint32 menuId, WorldObject* pSource)
 uint32 Player::GetDefaultGossipMenuForSource(WorldObject* pSource) const
 {
     if (pSource->GetTypeId() == TYPEID_UNIT)
-        return ((Creature*)pSource)->GetCreatureInfo()->GossipMenuId;
+        return ((Creature*)pSource)->GetDefaultGossipMenuId();
     if (pSource->GetTypeId() == TYPEID_GAMEOBJECT)
         return ((GameObject*)pSource)->GetGOInfo()->GetGossipMenuId();
 
@@ -16925,7 +16928,7 @@ bool Player::ActivateTaxiPathTo(std::vector<uint32> const& nodes, Creature* npc 
     if (npc)
     {
         // not let cheating with start flight mounted
-        if (IsMounted())
+        if (GetMountID())
         {
             GetSession()->SendActivateTaxiReply(ERR_TAXIPLAYERALREADYMOUNTED);
             return false;
